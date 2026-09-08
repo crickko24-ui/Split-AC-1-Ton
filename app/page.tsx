@@ -970,8 +970,12 @@ export default function DhanvarshaDashboard() {
         }));
         // Ensure standard fixed order
         const SESSION_ORDER = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
-        mapped.sort((a, b) => SESSION_ORDER.indexOf(a.id) - SESSION_ORDER.indexOf(b.id));
-        useStore.getState().setMarkets(mapped);
+        const sorted = [...mapped].sort((a, b) => {
+          const indexA = SESSION_ORDER.indexOf(a.id?.toLowerCase());
+          const indexB = SESSION_ORDER.indexOf(b.id?.toLowerCase());
+          return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+        });
+        useStore.getState().setMarkets(sorted);
       } else {
         // Seed default markets if empty
         const defaultMarkets = useStore.getState().markets;
@@ -1028,9 +1032,17 @@ export default function DhanvarshaDashboard() {
           openTime: m.open_time,
           closeTime: m.close_time
         };
-        useStore.setState((state) => ({
-          markets: state.markets.map(old => old.id === updated.id ? updated : old)
-        }));
+        useStore.setState((state) => {
+          const updatedList = state.markets.map(old => old.id === updated.id ? updated : old);
+          const SESSION_ORDER = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
+          return {
+            markets: updatedList.sort((a, b) => {
+              const indexA = SESSION_ORDER.indexOf(a.id?.toLowerCase());
+              const indexB = SESSION_ORDER.indexOf(b.id?.toLowerCase());
+              return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+            })
+          };
+        });
       })
       .subscribe();
 
