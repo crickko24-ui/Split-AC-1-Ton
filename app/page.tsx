@@ -103,30 +103,14 @@ const useStore = create<AppState>((set) => ({
     await supabase.from('dhanvarsha_markets').update(dbUpdates).eq('id', id);
   },
   addHistoryRecord: async (record) => {
-    const newRecord = { ...record, id: `${record.marketId}_${record.dateStr.replace(/\//g, '-')}` };
-    
-    set((state) => {
-      const existingIndex = state.history.findIndex(h => h.dateStr === record.dateStr && h.marketId === record.marketId);
-      let newHistory;
-      if (existingIndex >= 0) {
-        newHistory = [...state.history];
-        newHistory[existingIndex] = { ...newHistory[existingIndex], ...newRecord };
-      } else {
-        newHistory = [newRecord, ...state.history];
-      }
-      return { history: newHistory };
-    });
-
-    // DB Insert or Update
-    await supabase.from('dhanvarsha_history').upsert({
-      id: newRecord.id,
-      date: newRecord.dateStr,
-      session: newRecord.marketName,
-      open_pana: newRecord.openPana,
-      jodi: newRecord.jodi,
-      close_pana: newRecord.closePana,
-      timestamp: newRecord.timestamp
-    });
+    // DB Insert
+    await supabase.from('dhanvarsha_history').insert([{
+      date: record.dateStr,
+      session: record.marketName,
+      open_pana: record.openPana,
+      jodi: record.jodi,
+      close_pana: record.closePana
+    }]);
   },
   deleteHistoryRecord: async (id) => {
     set((state) => {
@@ -384,7 +368,7 @@ const ChartsView = () => {
   const { history, markets } = useStore();
   const [filter, setFilter] = useState('ALL');
 
-  const filteredHistory = history.filter(h => filter === 'ALL' || h.marketId === filter);
+  const filteredHistory = history.filter(h => filter === 'ALL' || h.marketName === filter);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -403,9 +387,9 @@ const ChartsView = () => {
           {markets.map(m => (
             <button
               key={m.id}
-              onClick={() => setFilter(m.id)}
+              onClick={() => setFilter(m.name)}
               className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors border-2 ${
-                filter === m.id ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600'
+                filter === m.name ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600'
               }`}
             >
               {m.name}
@@ -1008,18 +992,18 @@ export default function DhanvarshaDashboard() {
       const { data: historyData } = await supabase
         .from('dhanvarsha_history')
         .select('*')
-        .order('timestamp', { ascending: false });
+        .order('created_at', { ascending: false });
         
       if (historyData) {
         const mappedHist = historyData.map(h => ({
           id: h.id,
           dateStr: h.date,
-          marketId: h.id.split('_')[0],
+          marketId: useStore.getState().markets.find(m => m.name === h.session)?.id || '',
           marketName: h.session,
           openPana: h.open_pana,
           closePana: h.close_pana,
           jodi: h.jodi,
-          timestamp: h.timestamp
+          timestamp: new Date(h.created_at).getTime() || Date.now()
         }));
         useStore.getState().setHistory(mappedHist);
       }
@@ -1056,12 +1040,12 @@ export default function DhanvarshaDashboard() {
         const newRecord = {
           id: h.id,
           dateStr: h.date,
-          marketId: h.id.split('_')[0],
+          marketId: useStore.getState().markets.find(m => m.name === h.session)?.id || '',
           marketName: h.session,
           openPana: h.open_pana,
           closePana: h.close_pana,
           jodi: h.jodi,
-          timestamp: h.timestamp
+          timestamp: new Date(h.created_at).getTime() || Date.now()
         };
         useStore.setState((state) => ({
           history: [newRecord, ...state.history]
