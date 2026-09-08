@@ -2,9 +2,33 @@
 
 import React, { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { Trophy, ShieldAlert, ChevronDown } from 'lucide-react';
+import { Trophy, ShieldAlert, ChevronDown, MessageCircle } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+
+const playDrawChime = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const playTone = (freq: number, delay: number, duration: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime + delay);
+      osc.stop(audioCtx.currentTime + delay + duration);
+    };
+
+    playTone(587.33, 0, 0.8);   // D5
+    playTone(880.00, 0.1, 1.2);  // A5
+    playTone(1174.66, 0.2, 1.5); // D6
+  } catch (e) {
+    console.log('Audio autoplay prevented:', e);
+  }
+};
 
 // --- Types & Constants ---
 export type MarketStatus = 'LIVE' | 'CLOSED' | 'UPCOMING' | 'HOLIDAY';
@@ -33,6 +57,8 @@ export interface HistoryRecord {
 }
 
 interface AppState {
+  lang: 'en' | 'hi';
+  setLang: (lang: 'en' | 'hi') => void;
   activeTab: 'LIVE' | 'CALCULATOR' | 'CHARTS';
   setActiveTab: (tab: 'LIVE' | 'CALCULATOR' | 'CHARTS') => void;
   markets: Market[];
@@ -55,6 +81,91 @@ interface AppState {
   resetAllMarkets: () => void;
 }
 
+const DICT = {
+  en: {
+    subtitle: "OFFICIAL LIVE DRAW PORTAL • DHANVARSHA",
+    tabLive: "🟢 Results",
+    tabCalc: "🧮 Calculator",
+    tabCharts: "📊 Charts",
+    liveDrawActive: "LIVE DRAW ACTIVE",
+    waitingForClose: "WAITING FOR CLOSE",
+    upcoming: "UPCOMING",
+    completed: "COMPLETED RESULT",
+    openAt: "OPEN AT",
+    closeAt: "CLOSE AT",
+    patti: "Patti",
+    jodi: "Jodi",
+    date: "Date",
+    session: "Session",
+    noDraws: "No completed draws recorded yet.",
+    adminPanel: "Admin Control Panel",
+    openPatti: "Open Patti",
+    closePatti: "Close Patti",
+    savePublish: "Save & Publish Result",
+    resultIn: "Result in",
+    closeIn: "Close in",
+    drawingNow: "Drawing Now...",
+    declared: "DECLARED",
+    closed: "CLOSED",
+    shareResult: "Share Result",
+    markets: {
+      "Dhanvarsha Morning": "Dhanvarsha Morning",
+      "Dhanvarsha Day": "Dhanvarsha Day",
+      "Dhanvarsha Afternoon": "Dhanvarsha Afternoon",
+      "Dhanvarsha Gold": "Dhanvarsha Gold",
+      "Dhanvarsha Evening": "Dhanvarsha Evening",
+      "Dhanvarsha Night": "Dhanvarsha Night",
+      "DHANVARSHA MORNING": "Dhanvarsha Morning",
+      "DHANVARSHA DAY": "Dhanvarsha Day",
+      "DHANVARSHA AFTERNOON": "Dhanvarsha Afternoon",
+      "DHANVARSHA GOLD": "Dhanvarsha Gold",
+      "DHANVARSHA EVENING": "Dhanvarsha Evening",
+      "DHANVARSHA NIGHT": "Dhanvarsha Night"
+    }
+  },
+  hi: {
+    subtitle: "आधिकारिक लाइव परिणाम पोर्टल • धनवर्षा",
+    tabLive: "🟢 लाइव परिणाम",
+    tabCalc: "🧮 कैलकुलेटर",
+    tabCharts: "📊 इतिहास चार्ट",
+    liveDrawActive: "लाइव ड्रॉ सक्रिय",
+    waitingForClose: "क्लोज का इंतजार",
+    upcoming: "आगामी परिणाम",
+    completed: "पूर्ण परिणाम",
+    openAt: "ओपन समय",
+    closeAt: "क्लोज समय",
+    patti: "पत्ती",
+    jodi: "जोड़ी",
+    date: "दिनांक",
+    session: "सत्र",
+    noDraws: "अभी तक कोई पूर्ण परिणाम दर्ज नहीं हुआ है।",
+    adminPanel: "एडमिन कंट्रोल पैनल",
+    openPatti: "ओपन पत्ती",
+    closePatti: "क्लोज पत्ती",
+    savePublish: "सेव और लाइव पब्लिश करें",
+    resultIn: "परिणाम",
+    closeIn: "क्लोज",
+    drawingNow: "परिणाम आ रहा है...",
+    declared: "घोषित",
+    closed: "बंद",
+    shareResult: "परिणाम शेयर करें",
+    markets: {
+      "Dhanvarsha Morning": "धनवर्षा मॉर्निंग",
+      "Dhanvarsha Day": "धनवर्षा डे",
+      "Dhanvarsha Afternoon": "धनवर्षा आफ्टरनून",
+      "Dhanvarsha Gold": "धनवर्षा गोल्ड",
+      "Dhanvarsha Evening": "धनवर्षा इवनिंग",
+      "Dhanvarsha Night": "धनवर्षा नाइट",
+      "DHANVARSHA MORNING": "धनवर्षा मॉर्निंग",
+      "DHANVARSHA DAY": "धनवर्षा डे",
+      "DHANVARSHA AFTERNOON": "धनवर्षा आफ्टरनून",
+      "DHANVARSHA GOLD": "धनवर्षा गोल्ड",
+      "DHANVARSHA EVENING": "धनवर्षा इवनिंग",
+      "DHANVARSHA NIGHT": "धनवर्षा नाइट"
+    }
+  }
+};
+
 const defaultMarkets: Market[] = [
   { id: 'm1', name: 'Dhanvarsha Morning', openPana: '***', openSingle: '*', closeSingle: '*', closePana: '***', status: 'UPCOMING', openTime: '10:00', closeTime: '11:00' },
   { id: 'm2', name: 'Dhanvarsha Day', openPana: '***', openSingle: '*', closeSingle: '*', closePana: '***', status: 'UPCOMING', openTime: '13:00', closeTime: '14:00' },
@@ -65,6 +176,11 @@ const defaultMarkets: Market[] = [
 ];
 
 const useStore = create<AppState>((set) => ({
+  lang: 'en',
+  setLang: (lang) => {
+    localStorage.setItem('_dhan_lang', lang);
+    set({ lang });
+  },
   activeTab: 'LIVE',
   setActiveTab: (tab) => set({ activeTab: tab }),
   markets: defaultMarkets,
@@ -195,6 +311,8 @@ const getTargetTimeMs = (time24: string) => {
 const MarketCard = ({ market }: { market: Market }) => {
   const { status } = getStatus(market);
   const [now, setNow] = useState(Date.now());
+  const { lang } = useStore();
+  const t = DICT[lang];
   
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -202,40 +320,109 @@ const MarketCard = ({ market }: { market: Market }) => {
   }, []);
 
   const renderBadge = () => {
-    if (status === 'HOLIDAY') return <div className="px-4 py-1.5 rounded-full bg-red-600 text-white font-bold text-xs uppercase tracking-widest">CLOSED</div>;
-    if (status === 'CLOSED') return <div className="px-4 py-1.5 rounded-full bg-emerald-600/20 text-emerald-500 border border-emerald-600/50 font-bold text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.2)]">✅ DECLARED</div>;
+    if (status === 'HOLIDAY') return <div className="px-4 py-1.5 rounded-full bg-red-600 text-white font-bold text-xs uppercase tracking-widest">{t.closed}</div>;
+    if (status === 'CLOSED') {
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <div className="px-4 py-1.5 rounded-full bg-emerald-600/20 text-emerald-500 border border-emerald-600/50 font-bold text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.2)]">✅ {t.declared}</div>
+          <div className="text-[10px] font-bold text-emerald-400 tracking-wider">{t.completed}</div>
+        </div>
+      );
+    }
     
     if (status === 'LIVE') {
+      const targetClose = getTargetTimeMs(market.closeTime);
+      const diffClose = targetClose - now;
       return (
-        <div className="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/50 font-bold text-xs uppercase tracking-widest animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-          🕒 CLOSE AT: {formatTime12h(market.closeTime)}
+        <div className="flex flex-col items-center gap-1">
+          <div className="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/50 font-bold text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            🕒 {t.closeAt} {formatTime12h(market.closeTime)}
+          </div>
+          {diffClose > 0 ? (
+            <div className="text-[10px] font-bold text-slate-400 tracking-wider animate-pulse">
+              {t.closeIn}: {Math.floor(diffClose / (1000 * 60 * 60))}h {Math.floor((diffClose % (1000 * 60 * 60)) / 60000)}m {Math.floor((diffClose % 60000) / 1000)}s
+            </div>
+          ) : (
+            <div className="text-[10px] font-bold text-amber-500 tracking-wider animate-pulse">
+              {t.drawingNow}
+            </div>
+          )}
         </div>
       );
     }
 
     // UPCOMING
-    const target = getTargetTimeMs(market.openTime);
-    const diff = target - now;
-    const isWithinHour = diff > 0 && diff <= 60 * 60 * 1000;
+    const targetOpen = getTargetTimeMs(market.openTime);
+    const diffOpen = targetOpen - now;
     
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="px-4 py-1.5 rounded-full bg-slate-800 text-amber-500 border border-slate-700 font-bold text-xs uppercase tracking-widest">
-          🕒 OPEN AT: {formatTime12h(market.openTime)}
+          🕒 {t.openAt} {formatTime12h(market.openTime)}
         </div>
-        {isWithinHour && (
-          <div className="text-[10px] font-bold text-slate-400 tracking-wider">
-            Result in: {Math.floor(diff / 60000)}m {Math.floor((diff % 60000) / 1000)}s
+        {diffOpen > 0 ? (
+          <div className="text-[10px] font-bold text-slate-400 tracking-wider animate-pulse">
+            {t.resultIn}: {Math.floor(diffOpen / (1000 * 60 * 60))}h {Math.floor((diffOpen % (1000 * 60 * 60)) / 60000)}m {Math.floor((diffOpen % 60000) / 1000)}s
+          </div>
+        ) : (
+          <div className="text-[10px] font-bold text-amber-500 tracking-wider animate-pulse">
+            {t.drawingNow}
           </div>
         )}
       </div>
     );
   };
   
+  const targetOpen = getTargetTimeMs(market.openTime);
+  const diffOpen = targetOpen - now;
+  const isLiveSession = status === 'LIVE' || (status === 'UPCOMING' && diffOpen > 0 && diffOpen <= 30 * 60 * 1000);
+
+  const handleShare = () => {
+    const dateStr = new Date().toLocaleDateString('en-GB');
+    const openP = market.openPana || '***';
+    const closeP = market.closePana || '***';
+    const j = `${market.openSingle || '*'}${market.closeSingle || '*'}`;
+    const mName = (t.markets as any)[market.name.toUpperCase().trim()] || market.name;
+    const text = `🏆 *DHANVARSHA OFFICIAL LIVE RESULT* 🏆
+📅 Date: ${dateStr}
+🎯 Session: ${mName}
+🔥 Result: *${openP} - ${j} - ${closeP}*
+
+⚡ Fast Live Results at:
+👉 https://dhanvarshaliveresults.vercel.app/`;
+    
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-6 flex flex-col items-center p-6 sm:p-8 relative">
-      <div className="flex flex-col items-center justify-center w-full mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-300 uppercase tracking-wider text-center mb-3">{market.name}</h2>
+    <div className={`rounded-2xl overflow-hidden mb-6 flex flex-col items-center p-6 sm:p-8 relative ${
+      isLiveSession 
+        ? 'bg-gradient-to-br from-[#0F1D38] to-[#0A1120] border border-amber-500/40 shadow-xl shadow-amber-500/10' 
+        : 'bg-slate-900 border border-slate-800'
+    }`}>
+      {isLiveSession && (
+        <div className="absolute top-4 left-4 flex items-center bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+          <div className="relative flex h-2 w-2 mr-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </div>
+          <span className="text-emerald-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase">{t.liveDrawActive}</span>
+        </div>
+      )}
+      
+      {/* Share Button (Top Right) */}
+      {(status === 'LIVE' || status === 'CLOSED' || market.openPana !== '***') && (
+        <button 
+          onClick={handleShare}
+          className="absolute top-4 right-4 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] transition active:scale-95 border border-emerald-500"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          <span>{t.shareResult}</span>
+        </button>
+      )}
+
+      <div className="flex flex-col items-center justify-center w-full mb-6 mt-8 sm:mt-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-300 uppercase tracking-wider text-center mb-3">{(t.markets as any)[market.name.toUpperCase().trim()] || market.name}</h2>
         {renderBadge()}
       </div>
       
@@ -247,16 +434,16 @@ const MarketCard = ({ market }: { market: Market }) => {
              </span>
            </div>
         ) : (
-          <div className="flex items-center justify-center gap-4 sm:gap-6 w-full font-mono font-bold text-4xl sm:text-6xl">
-            <span className="text-amber-500 w-24 sm:w-32 text-right">
+          <div className="flex items-center justify-center gap-4 sm:gap-6 w-full font-mono text-4xl sm:text-6xl">
+            <span className="text-amber-400 font-black w-24 sm:w-32 text-right">
               {market.openPana || '***'}
             </span>
             <span className="text-slate-600 font-light">-</span>
-            <span className="text-white w-24 sm:w-32 text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-5xl sm:text-7xl">
+            <span className="text-white font-black w-24 sm:w-32 text-center drop-shadow-md text-5xl sm:text-7xl">
               {market.openSingle || '*'}{market.closeSingle || '*'}
             </span>
             <span className="text-slate-600 font-light">-</span>
-            <span className="text-emerald-500 w-24 sm:w-32 text-left">
+            <span className="text-emerald-400 font-black w-24 sm:w-32 text-left">
               {market.closePana || '***'}
             </span>
           </div>
@@ -385,15 +572,16 @@ const isRedJodi = (jodi: string) => {
 };
 
 const ChartsView = () => {
-  const { history, markets } = useStore();
+  const { history, markets, lang } = useStore();
   const [filter, setFilter] = useState('ALL');
+  const t = DICT[lang];
 
   const filteredHistory = history.filter(h => filter === 'ALL' || h.marketName === filter);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8">
-        <h2 className="text-2xl font-bold text-white mb-6 uppercase text-center tracking-widest">Historical Archive</h2>
+        <h2 className="text-2xl font-bold text-white mb-6 uppercase text-center tracking-widest">{t.tabCharts.replace('📊 ', '')}</h2>
         
         <div className="flex overflow-x-auto no-scrollbar gap-2 mb-8 pb-2">
           <button
@@ -402,7 +590,7 @@ const ChartsView = () => {
               filter === 'ALL' ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600'
             }`}
           >
-            All Sessions
+            {lang === 'en' ? 'All Sessions' : 'सभी सत्र'}
           </button>
           {markets.map(m => (
             <button
@@ -412,7 +600,7 @@ const ChartsView = () => {
                 filter === m.name ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600'
               }`}
             >
-              {m.name}
+              {(t.markets as any)[m.name.toUpperCase().trim()] || m.name}
             </button>
           ))}
         </div>
@@ -421,9 +609,9 @@ const ChartsView = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b-2 border-slate-700 bg-slate-950">
-                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest">Date</th>
-                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest">Session</th>
-                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest text-center">Result</th>
+                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest">{t.date}</th>
+                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest">{t.session}</th>
+                <th className="py-4 px-4 text-xs font-bold text-amber-500 uppercase tracking-widest text-center">{lang === 'en' ? 'Result' : 'परिणाम'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
@@ -432,7 +620,7 @@ const ChartsView = () => {
                 return (
                   <tr key={record.id} className="hover:bg-slate-800/30 transition-colors odd:bg-slate-950/60 even:bg-slate-900/40">
                     <td className="py-4 px-4 text-sm font-mono text-slate-300 font-bold">{record.dateStr}</td>
-                    <td className="py-4 px-4 text-sm font-bold text-white uppercase tracking-wider">{record.marketName}</td>
+                    <td className="py-4 px-4 text-sm font-bold text-white uppercase tracking-wider">{(t.markets as any)[record.marketName.toUpperCase().trim()] || record.marketName}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-center gap-2 font-mono font-bold text-lg sm:text-xl">
                         <span className="text-amber-500 tracking-widest w-12 text-right">{record.openPana}</span>
@@ -449,8 +637,8 @@ const ChartsView = () => {
               })}
               {filteredHistory.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-12 text-center text-slate-500 font-bold uppercase tracking-widest text-sm">
-                    No past records declared yet.<br/><span className="text-xs font-normal mt-2 block">Results will appear here automatically once draws are completed.</span>
+                  <td colSpan={3} className="py-12 text-center text-slate-500 font-bold tracking-widest text-sm">
+                    {t.noDraws}
                   </td>
                 </tr>
               )}
@@ -481,7 +669,8 @@ const sortPatti = (pana: string) => {
 };
 
 const AdminModal = () => {
-  const { setIsAdminOpen, markets, updateMarket } = useStore();
+  const { setIsAdminOpen, markets, updateMarket, lang } = useStore();
+  const t = DICT[lang];
   const [selectedId, setSelectedId] = useState(markets[0].id);
   const [openPana, setOpenPana] = useState('');
   const [jodi, setJodi] = useState('');
@@ -564,7 +753,7 @@ const AdminModal = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
       <div className="bg-slate-900 w-full max-w-xl rounded-2xl border border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-slate-950 p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-white uppercase tracking-widest">Admin Control Panel</h2>
+          <h2 className="text-xl font-bold text-white uppercase tracking-widest">{t.adminPanel}</h2>
           <button onClick={() => setIsAdminOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm uppercase">Cancel</button>
         </div>
         
@@ -632,7 +821,7 @@ const AdminModal = () => {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               
               <div className="w-full sm:flex-1 space-y-2">
-                <label className="block text-xs font-bold text-amber-500 uppercase tracking-widest text-center">Open Patti</label>
+                <label className="block text-xs font-bold text-amber-500 uppercase tracking-widest text-center">{t.openPatti}</label>
                 <input 
                   type="text" 
                   maxLength={3}
@@ -668,7 +857,7 @@ const AdminModal = () => {
               </div>
 
               <div className="w-24 sm:w-28 space-y-2">
-                <label className="block text-xs font-bold text-white uppercase tracking-widest text-center">Jodi</label>
+                <label className="block text-xs font-bold text-white uppercase tracking-widest text-center">{t.jodi}</label>
                 <input 
                   type="text" 
                   maxLength={2}
@@ -680,7 +869,7 @@ const AdminModal = () => {
               </div>
 
               <div className="w-full sm:flex-1 space-y-2">
-                <label className="block text-xs font-bold text-emerald-500 uppercase tracking-widest text-center">Close Patti</label>
+                <label className="block text-xs font-bold text-emerald-500 uppercase tracking-widest text-center">{t.closePatti}</label>
                 <input 
                   type="text" 
                   maxLength={3}
@@ -720,7 +909,7 @@ const AdminModal = () => {
               onClick={() => setIsSaveConfirmOpen(true)} 
               className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl rounded-xl transition-colors uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] mt-6"
             >
-              🟢 SAVE & PUBLISH RESULT
+              🟢 {t.savePublish}
             </button>
           </div>
           
@@ -960,10 +1149,12 @@ const SecurityDialog = () => {
 };
 
 export default function DhanvarshaDashboard() {
-  const { activeTab, setActiveTab, isSecurityDialogOpen, isAdminOpen } = useStore();
+  const { activeTab, setActiveTab, isSecurityDialogOpen, isAdminOpen, lang, setLang } = useStore();
   const [tapCount, setTapCount] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [mounted, setMounted] = useState(false);
+
+  const t = DICT[lang];
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -1052,6 +1243,21 @@ export default function DhanvarshaDashboard() {
           openTime: m.open_time,
           closeTime: m.close_time
         };
+        
+        // Trigger Chime if results were updated
+        const old = payload.old as any;
+        if (old) {
+          if (
+            (old.open_pana !== m.open_pana && m.open_pana !== '***') || 
+            (old.close_pana !== m.close_pana && m.close_pana !== '***') || 
+            (old.jodi !== m.jodi && m.jodi !== '**')
+          ) {
+            playDrawChime();
+          }
+        } else if (m.open_pana !== '***' || m.close_pana !== '***') {
+          playDrawChime();
+        }
+
         useStore.setState((state) => {
           const updatedList = state.markets.map(old => old.id === updated.id ? updated : old);
           const SESSION_ORDER = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
@@ -1104,6 +1310,11 @@ export default function DhanvarshaDashboard() {
     const storedLastReset = localStorage.getItem('_dhan_last_reset');
     if (storedLastReset) {
        useStore.setState({ lastResetDate: storedLastReset });
+    }
+
+    const storedLang = localStorage.getItem('_dhan_lang');
+    if (storedLang === 'en' || storedLang === 'hi') {
+       useStore.getState().setLang(storedLang);
     }
 
     const storedKey = localStorage.getItem('_dhan_ak');
@@ -1164,22 +1375,41 @@ export default function DhanvarshaDashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-black font-sans selection:bg-amber-500/30 selection:text-amber-200">
+    <div className="bg-gradient-to-b from-[#060A13] via-[#0B132B] to-[#060A13] text-white min-h-screen font-sans selection:bg-amber-500/30 selection:text-amber-200">
       
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-black/90 backdrop-blur-md border-b border-slate-900">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-center relative">
-          <div className="absolute left-4">
+      <header className="sticky top-0 z-10 bg-[#060A13]/90 backdrop-blur-md border-b border-amber-500/20 shadow-lg shadow-black/40">
+        <div className="max-w-4xl mx-auto w-full flex items-center justify-between px-4 py-3">
+          
+          {/* Left Side: Branding */}
+          <div className="flex items-center gap-3 min-w-0 pr-2">
             <div 
               onClick={handleTrophyClick}
-              className="flex items-center justify-center w-12 h-12 bg-amber-600 rounded-full border-2 border-amber-400 cursor-pointer shadow-[0_0_20px_rgba(217,119,6,0.3)] active:scale-95 transition-transform"
+              className="flex items-center justify-center w-10 h-10 shrink-0 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full border-2 border-amber-300 cursor-pointer shadow-[0_0_20px_rgba(217,119,6,0.5)] active:scale-95 transition-transform relative overflow-hidden"
             >
-              <Trophy className="w-6 h-6 text-black" strokeWidth={3} />
+              <div className="absolute inset-0 bg-yellow-300 opacity-20 animate-pulse"></div>
+              <Trophy className="w-5 h-5 text-yellow-950 relative z-10" strokeWidth={3} />
+            </div>
+            
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 leading-none uppercase drop-shadow-sm">
+                DHANVARSHA
+              </h1>
+              <span className="text-[10px] tracking-wide text-amber-300/70 font-medium truncate mt-1 uppercase drop-shadow-sm">
+                {t.subtitle}
+              </span>
             </div>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white uppercase text-center">
-            DHANVARSHA
-          </h1>
+
+          {/* Right Side: Language Switcher */}
+          <div className="shrink-0 flex items-center ml-2">
+            <div className="flex items-center bg-slate-900/90 border border-amber-500/30 text-[10px] sm:text-xs font-medium rounded-full p-0.5 cursor-pointer" onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}>
+              <span className={`px-2 py-0.5 rounded-full transition-colors ${lang === 'en' ? 'text-amber-300 font-bold bg-amber-500/20' : 'text-slate-400'}`}>ENG</span>
+              <span className="text-slate-600 mx-1">|</span>
+              <span className={`px-2 py-0.5 rounded-full transition-colors ${lang === 'hi' ? 'text-amber-300 font-bold bg-amber-500/20' : 'text-slate-400'}`}>हिन्दी</span>
+            </div>
+          </div>
+
         </div>
       </header>
 
@@ -1194,7 +1424,7 @@ export default function DhanvarshaDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🟢 Results
+            {t.tabLive}
           </button>
           <button
             onClick={() => setActiveTab('CALCULATOR')}
@@ -1204,7 +1434,7 @@ export default function DhanvarshaDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🧮 Calculator
+            {t.tabCalc}
           </button>
           <button
             onClick={() => setActiveTab('CHARTS')}
@@ -1214,7 +1444,7 @@ export default function DhanvarshaDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            📊 Charts
+            {t.tabCharts}
           </button>
         </div>
       </div>
