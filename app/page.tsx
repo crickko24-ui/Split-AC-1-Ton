@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { Trophy, ShieldAlert, ChevronDown } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
+import { supabase } from '@/lib/supabase';
 
 // --- Types & Constants ---
 export type MarketStatus = 'LIVE' | 'CLOSED' | 'UPCOMING' | 'HOLIDAY';
@@ -35,7 +36,9 @@ interface AppState {
   activeTab: 'LIVE' | 'CALCULATOR' | 'CHARTS';
   setActiveTab: (tab: 'LIVE' | 'CALCULATOR' | 'CHARTS') => void;
   markets: Market[];
+  setMarkets: (markets: Market[]) => void;
   history: HistoryRecord[];
+  setHistory: (history: HistoryRecord[]) => void;
   isAdminOpen: boolean;
   setIsAdminOpen: (val: boolean) => void;
   isSecurityDialogOpen: boolean;
@@ -61,79 +64,77 @@ const defaultMarkets: Market[] = [
   { id: 'm6', name: 'Dhanvarsha Night', openPana: '***', openSingle: '*', closeSingle: '*', closePana: '***', status: 'UPCOMING', openTime: '22:30', closeTime: '23:30' },
 ];
 
-const generateInitialHistory = (): HistoryRecord[] => {
-  const history: HistoryRecord[] = [];
-  const now = new Date();
-  
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    
-    defaultMarkets.forEach(m => {
-      // Deterministic pseudo-randomness for initial view
-      const hash = m.name.length + i;
-      const opSum = hash % 10;
-      const cpSum = (hash * 3) % 10;
-      const isRed = hash % 4 === 0;
-      const jodi = isRed ? `${opSum}${opSum}` : `${opSum}${cpSum}`;
-      
-      history.push({
-        id: `hist-${m.id}-${i}`,
-        dateStr,
-        timestamp: d.getTime(),
-        marketId: m.id,
-        marketName: m.name,
-        openPana: `12${opSum}`, // dummy realistic pana
-        closePana: `34${cpSum}`,
-        jodi
-      });
-    });
-  }
-  
-  return history.sort((a, b) => b.timestamp - a.timestamp);
-};
-
 const useStore = create<AppState>((set) => ({
   activeTab: 'LIVE',
   setActiveTab: (tab) => set({ activeTab: tab }),
   markets: defaultMarkets,
-  history: generateInitialHistory(),
+  setMarkets: (markets) => set({ markets }),
+  history: [],
+  setHistory: (history) => set({ history }),
   isAdminOpen: false,
   setIsAdminOpen: (val) => set({ isAdminOpen: val }),
   isSecurityDialogOpen: false,
   setIsSecurityDialogOpen: (val) => set({ isSecurityDialogOpen: val }),
   adminKey: 'DHAN9482X7',
   setAdminKey: (key) => set({ adminKey: key }),
-  updateMarket: (id, updates) => set((state) => {
-    const newMarkets = state.markets.map(m => m.id === id ? { ...m, ...updates } : m);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('_dhan_markets', JSON.stringify(newMarkets));
+  updateMarket: async (id, updates) => {
+    set((state) => {
+      const newMarkets = state.markets.map(m => m.id === id ? { ...m, ...updates } : m);
+      return { markets: newMarkets };
+    });
+    // Async DB update
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.openPana !== undefined) dbUpdates.open_pana = updates.openPana;
+    if (updates.closePana !== undefined) dbUpdates.close_pana = updates.closePana;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.openTime !== undefined) dbUpdates.open_time = updates.openTime;
+    if (updates.closeTime !== undefined) dbUpdates.close_time = updates.closeTime;
+    
+    // Jodi mapping
+    if (updates.openSingle !== undefined || updates.closeSingle !== undefined) {
+      // Find current market to construct full jodi
+      const current = useStore.getState().markets.find(m => m.id === id);
+      if (current) {
+         dbUpdates.jodi = `${current.openSingle}${current.closeSingle}`;
+      }
     }
-    return { markets: newMarkets };
-  }),
-  addHistoryRecord: (record) => set((state) => {
-    const existingIndex = state.history.findIndex(h => h.dateStr === record.dateStr && h.marketId === record.marketId);
-    let newHistory;
-    if (existingIndex >= 0) {
-      newHistory = [...state.history];
-      newHistory[existingIndex] = { ...newHistory[existingIndex], ...record };
-    } else {
-      const newRecord = { ...record, id: `hist-${Date.now()}` };
-      newHistory = [newRecord, ...state.history];
-    }
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('_dhan_history', JSON.stringify(newHistory));
-    }
-    return { history: newHistory };
-  }),
-  deleteHistoryRecord: (id) => set((state) => {
-    const newHistory = state.history.filter(h => h.id !== id);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('_dhan_history', JSON.stringify(newHistory));
-    }
-    return { history: newHistory };
-  }),
+
+    await supabase.from('dhanvarsha_markets').update(dbUpdates).eq('id', id);
+  },
+  addHistoryRecord: async (record) => {
+    const newRecord = { ...record, id: `${record.marketId}_${record.dateStr.replace(/\//g, '-')}` };
+    
+    set((state) => {
+      const existingIndex = state.history.findIndex(h => h.dateStr === record.dateStr && h.marketId === record.marketId);
+      let newHistory;
+      if (existingIndex >= 0) {
+        newHistory = [...state.history];
+        newHistory[existingIndex] = { ...newHistory[existingIndex], ...newRecord };
+      } else {
+        newHistory = [newRecord, ...state.history];
+      }
+      return { history: newHistory };
+    });
+
+    // DB Insert or Update
+    await supabase.from('dhanvarsha_history').upsert({
+      id: newRecord.id,
+      date: newRecord.dateStr,
+      session: newRecord.marketName,
+      open_pana: newRecord.openPana,
+      jodi: newRecord.jodi,
+      close_pana: newRecord.closePana,
+      timestamp: newRecord.timestamp
+    });
+  },
+  deleteHistoryRecord: async (id) => {
+    set((state) => {
+      const newHistory = state.history.filter(h => h.id !== id);
+      return { history: newHistory };
+    });
+    await supabase.from('dhanvarsha_history').delete().eq('id', id);
+  },
   autoResetMidnight: false,
   setAutoResetMidnight: (val) => set((state) => {
     if (typeof window !== 'undefined') {
@@ -148,20 +149,29 @@ const useStore = create<AppState>((set) => ({
     }
     return { lastResetDate: val };
   }),
-  resetAllMarkets: () => set((state) => {
-    const newMarkets = state.markets.map(m => ({
-      ...m,
-      openPana: '***',
-      openSingle: '*',
-      closeSingle: '*',
-      closePana: '***',
-      status: 'UPCOMING' as MarketStatus
-    }));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('_dhan_markets', JSON.stringify(newMarkets));
+  resetAllMarkets: async () => {
+    set((state) => {
+      const newMarkets = state.markets.map(m => ({
+        ...m,
+        openPana: '***',
+        openSingle: '*',
+        closeSingle: '*',
+        closePana: '***',
+        status: 'UPCOMING' as MarketStatus
+      }));
+      return { markets: newMarkets };
+    });
+    // Iterate over markets and update in Supabase
+    const markets = useStore.getState().markets;
+    for (const m of markets) {
+      await supabase.from('dhanvarsha_markets').update({
+        open_pana: '***',
+        jodi: '**',
+        close_pana: '***',
+        status: 'UPCOMING'
+      }).eq('id', m.id);
     }
-    return { markets: newMarkets };
-  })
+  }
 }));
 
 const getStatus = (market: Market) => {
@@ -435,8 +445,8 @@ const ChartsView = () => {
               })}
               {filteredHistory.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-12 text-center text-slate-500 font-bold uppercase tracking-widest">
-                    No records found
+                  <td colSpan={3} className="py-12 text-center text-slate-500 font-bold uppercase tracking-widest text-sm">
+                    No past records declared yet.<br/><span className="text-xs font-normal mt-2 block">Results will appear here automatically once draws are completed.</span>
                   </td>
                 </tr>
               )}
@@ -479,6 +489,7 @@ const AdminModal = () => {
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const autoResetMidnight = useStore(state => state.autoResetMidnight);
   const setAutoResetMidnight = useStore(state => state.setAutoResetMidnight);
+  const history = useStore(state => state.history);
 
   useEffect(() => {
     const m = markets.find(x => x.id === selectedId)!;
@@ -719,9 +730,9 @@ const AdminModal = () => {
           </div>
 
           <div className="pt-8 border-t border-slate-800">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Recent Draws</h3>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Declared History Ledger</h3>
             <div className="space-y-3">
-              {useStore.getState().history.slice(0, 5).map(record => (
+              {history.slice(0, 10).map(record => (
                 <div key={record.id} className="bg-black border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <div className="text-white font-bold">{record.marketName}</div>
@@ -730,16 +741,30 @@ const AdminModal = () => {
                   <div className="text-amber-400 font-mono font-bold text-lg tracking-widest">
                      {record.openPana} - {record.jodi} - {record.closePana}
                   </div>
-                  <button 
-                    onClick={() => useStore.getState().deleteHistoryRecord(record.id)}
-                    className="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/80 text-red-400 border border-red-800/50 rounded uppercase text-xs font-bold transition-colors"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setSelectedId(record.marketId);
+                        setOpenPana(record.openPana);
+                        setJodi(record.jodi);
+                        setClosePana(record.closePana);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded uppercase text-xs font-bold transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => useStore.getState().deleteHistoryRecord(record.id)}
+                      className="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/80 text-red-400 border border-red-800/50 rounded uppercase text-xs font-bold transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
-              {useStore.getState().history.length === 0 && (
-                <div className="text-slate-500 text-sm text-center py-4">No recent history</div>
+              {history.length === 0 && (
+                <div className="text-slate-500 text-sm text-center py-4">No past records declared yet. Results will appear here automatically once draws are completed.</div>
               )}
             </div>
           </div>
@@ -939,19 +964,118 @@ export default function DhanvarshaDashboard() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    const storedMarkets = localStorage.getItem('_dhan_markets');
-    if (storedMarkets) {
-      try {
-        useStore.setState({ markets: JSON.parse(storedMarkets) });
-      } catch (e) {}
-    }
 
-    const storedHistory = localStorage.getItem('_dhan_history');
-    if (storedHistory) {
-      try {
-        useStore.setState({ history: JSON.parse(storedHistory) });
-      } catch (e) {}
-    }
+    const fetchData = async () => {
+      // Fetch Markets
+      const { data: marketsData } = await supabase
+        .from('dhanvarsha_markets')
+        .select('*');
+        
+      if (marketsData && marketsData.length > 0) {
+        // Map snake_case back to camelCase
+        const mapped = marketsData.map(m => ({
+          id: m.id,
+          name: m.name,
+          openPana: m.open_pana,
+          openSingle: m.jodi ? m.jodi[0] : '*',
+          closeSingle: m.jodi ? m.jodi[1] : '*',
+          closePana: m.close_pana,
+          status: m.status,
+          openTime: m.open_time,
+          closeTime: m.close_time
+        }));
+        // Ensure standard order
+        mapped.sort((a, b) => a.openTime.localeCompare(b.openTime));
+        useStore.getState().setMarkets(mapped);
+      } else {
+        // Seed default markets if empty
+        const defaultMarkets = useStore.getState().markets;
+        for (const m of defaultMarkets) {
+          await supabase.from('dhanvarsha_markets').upsert({
+            id: m.id,
+            name: m.name,
+            open_pana: m.openPana,
+            jodi: `${m.openSingle}${m.closeSingle}`,
+            close_pana: m.closePana,
+            status: m.status,
+            open_time: m.openTime,
+            close_time: m.closeTime
+          });
+        }
+      }
+
+      // Fetch History
+      const { data: historyData } = await supabase
+        .from('dhanvarsha_history')
+        .select('*')
+        .order('timestamp', { ascending: false });
+        
+      if (historyData) {
+        const mappedHist = historyData.map(h => ({
+          id: h.id,
+          dateStr: h.date,
+          marketId: h.id.split('_')[0],
+          marketName: h.session,
+          openPana: h.open_pana,
+          closePana: h.close_pana,
+          jodi: h.jodi,
+          timestamp: h.timestamp
+        }));
+        useStore.getState().setHistory(mappedHist);
+      }
+    };
+
+    fetchData();
+
+    // Subscribe to markets
+    const marketSub = supabase.channel('market_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dhanvarsha_markets' }, payload => {
+        const m = payload.new as any;
+        if (!m.id) return;
+        const updated = {
+          id: m.id,
+          name: m.name,
+          openPana: m.open_pana,
+          openSingle: m.jodi ? m.jodi[0] : '*',
+          closeSingle: m.jodi ? m.jodi[1] : '*',
+          closePana: m.close_pana,
+          status: m.status,
+          openTime: m.open_time,
+          closeTime: m.close_time
+        };
+        useStore.setState((state) => ({
+          markets: state.markets.map(old => old.id === updated.id ? updated : old)
+        }));
+      })
+      .subscribe();
+
+    // Subscribe to history
+    const historySub = supabase.channel('history_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dhanvarsha_history' }, payload => {
+        const h = payload.new as any;
+        const newRecord = {
+          id: h.id,
+          dateStr: h.date,
+          marketId: h.id.split('_')[0],
+          marketName: h.session,
+          openPana: h.open_pana,
+          closePana: h.close_pana,
+          jodi: h.jodi,
+          timestamp: h.timestamp
+        };
+        useStore.setState((state) => ({
+          history: [newRecord, ...state.history]
+        }));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dhanvarsha_history' }, payload => {
+        const h = payload.old as any;
+        if (h && h.id) {
+           useStore.setState((state) => ({
+             history: state.history.filter(record => record.id !== h.id)
+           }));
+        }
+      })
+      .subscribe();
 
     const storedAutoReset = localStorage.getItem('_dhan_auto_reset');
     if (storedAutoReset !== null) {
@@ -998,7 +1122,11 @@ export default function DhanvarshaDashboard() {
     
     // Then check every minute
     const interval = setInterval(checkMidnightReset, 60000);
-    return () => clearInterval(interval);
+    return () => {
+       clearInterval(interval);
+       supabase.removeChannel(marketSub);
+       supabase.removeChannel(historySub);
+    };
   }, []);
 
   const handleTrophyClick = () => {
