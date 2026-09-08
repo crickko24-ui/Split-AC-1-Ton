@@ -175,17 +175,19 @@ const getStatus = (market: Market) => {
 
 const formatTime12h = (time24: string) => {
   if (!time24) return '';
-  const [h, m] = time24.split(':');
+  const cleanTime = time24.replace(/\s*(AM|PM)\s*/i, '').trim();
+  const [h, m] = cleanTime.split(':');
   let hour = parseInt(h, 10);
   const ampm = hour >= 12 ? 'PM' : 'AM';
   hour = hour % 12 || 12;
-  return `${hour.toString().padStart(2, '0')}:${m} ${ampm}`;
+  return `${hour.toString().padStart(2, '0')}:${m?.trim()} ${ampm}`;
 };
 
 const getTargetTimeMs = (time24: string) => {
   if (!time24) return 0;
+  const cleanTime = time24.replace(/\s*(AM|PM)\s*/i, '').trim();
   const now = new Date();
-  const [h, m] = time24.split(':');
+  const [h, m] = cleanTime.split(':');
   now.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
   return now.getTime();
 };
@@ -266,9 +268,27 @@ const MarketCard = ({ market }: { market: Market }) => {
 
 const LiveView = () => {
   const { markets } = useStore();
+  
+  const SEQUENCE = [
+    "DHANVARSHA MORNING",
+    "DHANVARSHA DAY",
+    "DHANVARSHA AFTERNOON",
+    "DHANVARSHA GOLD",
+    "DHANVARSHA EVENING",
+    "DHANVARSHA NIGHT"
+  ];
+
+  const displayMarkets = [...markets].sort((a, b) => {
+    const nameA = (a.name || '').toUpperCase().trim();
+    const nameB = (b.name || '').toUpperCase().trim();
+    const indexA = SEQUENCE.findIndex(s => nameA.includes(s) || s.includes(nameA));
+    const indexB = SEQUENCE.findIndex(s => nameB.includes(s) || s.includes(nameB));
+    return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+  });
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-2">
-      {markets.map(m => (
+      {displayMarkets.map(m => (
         <MarketCard key={m.id} market={m} />
       ))}
     </div>
