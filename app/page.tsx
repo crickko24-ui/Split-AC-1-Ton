@@ -968,8 +968,9 @@ export default function DhanvarshaDashboard() {
           openTime: m.open_time,
           closeTime: m.close_time
         }));
-        // Ensure standard order
-        mapped.sort((a, b) => a.openTime.localeCompare(b.openTime));
+        // Ensure standard fixed order
+        const SESSION_ORDER = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
+        mapped.sort((a, b) => SESSION_ORDER.indexOf(a.id) - SESSION_ORDER.indexOf(b.id));
         useStore.getState().setMarkets(mapped);
       } else {
         // Seed default markets if empty
