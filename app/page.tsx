@@ -308,16 +308,123 @@ const getTargetTimeMs = (time24: string) => {
   return now.getTime();
 };
 
+const getHindiDigit = (d: string) => {
+  const map: Record<string, string> = {
+    '0': 'शून्य', '1': 'एक', '2': 'दो', '3': 'तीन', '4': 'चार', '5': 'पाँच', '6': 'छह', '7': 'सात', '8': 'आठ', '9': 'नौ'
+  };
+  return map[d] || '';
+};
+
+const getHindiJodi = (str: string) => {
+  const num = parseInt(str, 10);
+  if (isNaN(num)) return '';
+  const words = [
+    'शून्य', 'एक', 'दो', 'तीन', 'चार', 'पाँच', 'छह', 'सात', 'आठ', 'नौ', 'दस',
+    'ग्यारह', 'बारह', 'तेरह', 'चौदह', 'पंद्रह', 'सोलह', 'सत्रह', 'अठारह', 'उन्नीस', 'बीस',
+    'इक्कीस', 'बाईस', 'तेईस', 'चौबीस', 'पच्चीस', 'छब्बीस', 'सत्ताईस', 'अट्ठाईस', 'उनतीस', 'तीस',
+    'इकतीस', 'बत्तीस', 'तैंतीस', 'चौंतीस', 'पैंतीस', 'छत्तीस', 'सैंतीस', 'अड़तीस', 'उनतालीस', 'चालीस',
+    'इकतालीस', 'बयालीस', 'तैंतालीस', 'चौवालीस', 'पैंतालीस', 'छियालीस', 'सैंतालीस', 'अड़तालीस', 'उनचास', 'पचास',
+    'इक्यावन', 'बावन', 'तिरेपन', 'चौवन', 'पचपन', 'छप्पन', 'सत्तावन', 'अट्ठावन', 'उनसठ', 'साठ',
+    'इकसठ', 'बासठ', 'तिरसठ', 'चौंसठ', 'पैंसठ', 'छियासठ', 'सड़सठ', 'अड़सठ', 'उनहत्तर', 'सत्तर',
+    'इकहत्तर', 'बहत्तर', 'तिहत्तर', 'चौहत्तर', 'पचहत्तर', 'छिहत्तर', 'सतहत्तर', 'अठहत्तर', 'उन्नासी', 'अस्सी',
+    'इक्यासी', 'बयासी', 'तिरासी', 'चौरासी', 'पचासी', 'छियासी', 'सत्तासी', 'अट्ठासी', 'नवासी', 'नब्बे',
+    'इक्यानवे', 'बानवे', 'तिरानवे', 'चौरानवे', 'पचानवे', 'छियानवे', 'सत्तानवे', 'अट्ठानवे', 'निन्यानवे'
+  ];
+  return words[num] || '';
+};
+
+const spellPatti = (patti: string) => {
+  if (!patti || patti.includes('*')) return '';
+  return patti.split('').map(getHindiDigit).join(', ');
+};
+
+const getHindiTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+
+  let period = '';
+  if (h < 12) period = 'सुबह';
+  else if (h < 16) period = 'दोपहर';
+  else if (h < 20) period = 'शाम';
+  else period = 'रात';
+
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+
+  const hWord = getHindiJodi(h.toString());
+  const mWord = m > 0 ? `${getHindiJodi(m.toString())} मिनट` : 'बजे';
+
+  if (m === 0) {
+    return `${hWord} ${mWord} ${period}`;
+  } else {
+    return `${hWord} बजकर ${mWord} ${period}`;
+  }
+};
+
 const MarketCard = ({ market }: { market: Market }) => {
   const { status } = getStatus(market);
   const [now, setNow] = useState(Date.now());
   const { lang } = useStore();
   const t = DICT[lang];
+  const [isPlaying, setIsPlaying] = useState(false);
   
   useEffect(() => {
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleSpeak = () => {
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    
+    let textToSpeak = '';
+    const mName = (DICT['hi'].markets as any)[market.name.toUpperCase().trim()] || market.name;
+    
+    if (status === 'UPCOMING') {
+      const openTime = getHindiTime(market.openTime);
+      textToSpeak = `${mName} का रिजल्ट अभी नहीं आया है। ओपन रिजल्ट ${openTime} पर आएगा।`;
+    } else if (status === 'LIVE' || (status === 'CLOSED' && market.closePana === '***')) {
+      const patti = spellPatti(market.openPana);
+      const ank = getHindiDigit(market.openSingle);
+      const closeTime = getHindiTime(market.closeTime);
+      textToSpeak = `${mName} का ओपन रिजल्ट घोषित। ओपन पत्ती: ${patti}... ओपन अंक: ${ank}। बाकी का क्लोज़ रिजल्ट ${closeTime} पर आएगा।`;
+    } else if (status === 'CLOSED') {
+      const oPatti = spellPatti(market.openPana);
+      const jodi = getHindiJodi(`${market.openSingle}${market.closeSingle}`);
+      const cPatti = spellPatti(market.closePana);
+      textToSpeak = `${mName} का पूरा परिणाम घोषित। ओपन पत्ती: ${oPatti}... जोड़ी: ${jodi}... क्लोज़ पत्ती: ${cPatti}।`;
+    } else if (status === 'HOLIDAY') {
+       textToSpeak = `${mName} मार्केट आज के लिए बंद है।`;
+    }
+    
+    if (!textToSpeak) return;
+    
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 0.85;
+    utterance.pitch = 1.0;
+    
+    utterance.onstart = () => setIsPlaying(true);
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
+    
+    window.speechSynthesis.speak(utterance);
+  };
 
   const renderBadge = () => {
     if (status === 'HOLIDAY') return <div className="px-4 py-1.5 rounded-full bg-red-600 text-white font-bold text-xs uppercase tracking-widest">{t.closed}</div>;
@@ -424,6 +531,13 @@ const MarketCard = ({ market }: { market: Market }) => {
       <div className="flex flex-col items-center justify-center w-full mb-6 mt-8 sm:mt-0">
         <h2 className="text-xl sm:text-2xl font-bold text-slate-300 uppercase tracking-wider text-center mb-3">{(t.markets as any)[market.name.toUpperCase().trim()] || market.name}</h2>
         {renderBadge()}
+        
+        <button 
+          onClick={handleSpeak}
+          className="mt-4 flex items-center justify-center bg-slate-900 border border-amber-500/40 text-amber-400 font-bold text-xs sm:text-sm px-4 py-2 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-transform active:scale-95 hover:bg-slate-800"
+        >
+          {isPlaying ? "⏹️ बंद करें" : "🔊 बोलकर सुनो"}
+        </button>
       </div>
       
       <div className="flex flex-col items-center justify-center w-full">
