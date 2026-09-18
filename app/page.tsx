@@ -439,8 +439,8 @@ const MarketCard = ({ market }: { market: Market }) => {
   const renderBadge = () => {
     if (status === 'HOLIDAY') {
       return (
-        <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-600/20 text-red-500 border border-red-600/50 font-bold text-xs uppercase tracking-widest">
-          <div className="w-2 h-2 rounded-full bg-red-500"></div>
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-red-600/20 text-red-500 border border-red-600/50 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
           {t.closed}
         </div>
       );
@@ -448,12 +448,9 @@ const MarketCard = ({ market }: { market: Market }) => {
     
     if (status === 'CLOSED') {
       return (
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700 font-bold text-xs uppercase tracking-widest">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            {t.declared}
-          </div>
-          <div className="text-[10px] font-bold text-emerald-500 tracking-wider">{t.completed}</div>
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">
+          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+          {t.declared}
         </div>
       );
     }
@@ -462,17 +459,17 @@ const MarketCard = ({ market }: { market: Market }) => {
       const targetClose = getTargetTimeMs(market.closeTime);
       const diffClose = targetClose - now;
       return (
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 font-bold text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-            <CircleDot className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">
+            <CircleDot className="w-3 h-3 animate-pulse text-emerald-500" />
             {t.closeAt} {formatTime12h(market.closeTime)}
           </div>
           {diffClose > 0 ? (
-            <div className="text-[10px] font-bold text-slate-400 tracking-wider animate-pulse">
-              {t.closeIn}: {Math.floor(diffClose / (1000 * 60 * 60))}h {Math.floor((diffClose % (1000 * 60 * 60)) / 60000)}m {Math.floor((diffClose % 60000) / 1000)}s
+            <div className="text-[9px] font-bold text-slate-400 tracking-wider animate-pulse hidden sm:block whitespace-nowrap">
+              {Math.floor(diffClose / (1000 * 60 * 60))}h {Math.floor((diffClose % (1000 * 60 * 60)) / 60000)}m
             </div>
           ) : (
-            <div className="text-[10px] font-bold text-emerald-400 tracking-wider animate-pulse">
+            <div className="text-[9px] font-bold text-emerald-400 tracking-wider animate-pulse hidden sm:block whitespace-nowrap">
               {t.drawingNow}
             </div>
           )}
@@ -485,17 +482,17 @@ const MarketCard = ({ market }: { market: Market }) => {
     const diffOpen = targetOpen - now;
     
     return (
-      <div className="flex flex-col items-center gap-1">
-        <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 font-bold text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(245,158,11,0.1)]">
-          <Clock className="w-3.5 h-3.5" />
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">
+          <Clock className="w-3 h-3" />
           {t.openAt} {formatTime12h(market.openTime)}
         </div>
         {diffOpen > 0 ? (
-          <div className="text-[10px] font-bold text-slate-400 tracking-wider animate-pulse">
-            {t.resultIn}: {Math.floor(diffOpen / (1000 * 60 * 60))}h {Math.floor((diffOpen % (1000 * 60 * 60)) / 60000)}m {Math.floor((diffOpen % 60000) / 1000)}s
+          <div className="text-[9px] font-bold text-slate-400 tracking-wider animate-pulse hidden sm:block whitespace-nowrap">
+            {Math.floor(diffOpen / (1000 * 60 * 60))}h {Math.floor((diffOpen % (1000 * 60 * 60)) / 60000)}m
           </div>
         ) : (
-          <div className="text-[10px] font-bold text-amber-500 tracking-wider animate-pulse">
+          <div className="text-[9px] font-bold text-amber-500 tracking-wider animate-pulse hidden sm:block whitespace-nowrap">
             {t.drawingNow}
           </div>
         )}
@@ -528,122 +525,126 @@ const MarketCard = ({ market }: { market: Market }) => {
   const isStrictlyClosed = (status === 'CLOSED' && !isDeclared) || status === 'HOLIDAY';
 
   return (
-    <div className={`rounded-2xl overflow-hidden mb-6 flex flex-col items-center p-6 sm:p-8 relative transition-opacity duration-300 ${
+    <div className={`rounded-2xl overflow-hidden mb-4 flex flex-col items-center p-3 sm:p-4 relative transition-opacity duration-300 ${
       isDeclared
-        ? 'bg-gradient-to-br from-[#0F1D38] to-[#0A1120] border-2 border-amber-500/50 shadow-xl shadow-amber-500/10 opacity-100'
+        ? 'bg-gradient-to-br from-[#0F1D38] to-[#0A1120] border border-amber-500/30 shadow-lg shadow-amber-500/5 opacity-100'
         : isLiveSession 
-        ? 'bg-gradient-to-br from-[#0B132B] to-[#0A1120] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/10 opacity-100' 
+        ? 'bg-gradient-to-br from-[#0B132B] to-[#0A1120] border border-emerald-500/30 shadow-lg shadow-emerald-500/5 opacity-100' 
         : isStrictlyClosed
         ? 'bg-slate-900 border border-slate-800 opacity-60'
         : 'bg-[#0B0F19] border border-slate-700/50 opacity-100'
     }`}>
-      {/* Header Row: Badges and Actions */}
-      <div className="w-full flex items-start justify-between mb-2">
-        <div className="flex-1">
-          {isLiveSession && (
-            <div className="inline-flex items-center bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-              <div className="relative flex h-2 w-2 mr-2">
+      {/* Header Row: Title, Badge, Share */}
+      <div className="w-full flex items-center justify-between mb-3 border-b border-slate-800/60 pb-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2">
+            {isLiveSession && (
+              <div className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </div>
-              <span className="text-emerald-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase">{t.liveDrawActive}</span>
-            </div>
-          )}
+            )}
+            <h2 className="text-sm sm:text-base font-black text-slate-100 uppercase tracking-wide truncate max-w-[150px] sm:max-w-none">
+              {(t.markets as any)[market.name.toUpperCase().trim()] || market.name}
+            </h2>
+          </div>
+          {renderBadge()}
         </div>
         
-        {/* Share Button (Top Right) */}
+        {/* Share Button */}
         {(status === 'LIVE' || status === 'CLOSED' || isDeclared) && (
           <button 
             onClick={handleShare}
-            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] transition active:scale-95 border border-emerald-500 shrink-0"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-[10px] font-bold px-2 py-1.5 rounded-md shadow-sm transition active:scale-95 border border-slate-700 shrink-0"
           >
             <MessageCircle className="w-3.5 h-3.5" />
-            <span>{t.shareResult}</span>
+            <span className="hidden sm:inline">{t.shareResult}</span>
+            <span className="sm:hidden">Share</span>
           </button>
         )}
       </div>
 
-      <div className="flex flex-col items-center justify-center w-full mb-6 mt-2">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-200 uppercase tracking-wider text-center mb-3">{(t.markets as any)[market.name.toUpperCase().trim()] || market.name}</h2>
-        {renderBadge()}
+      <div className="flex flex-col items-center justify-center w-full">
+        {/* Play Button - Compact Pill */}
+        <div className="flex justify-center w-full mb-3">
+          <button 
+            onClick={handleSpeak}
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-[10px] sm:text-xs px-3 py-1 rounded-full shadow-sm transition-transform active:scale-95"
+          >
+            {isPlaying ? (
+              <>
+                <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+                <span>⏹️ बंद करें</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>बोलकर सुनो</span>
+              </>
+            )}
+          </button>
+        </div>
         
-        <button 
-          onClick={handleSpeak}
-          className="mt-5 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-[0_4px_14px_rgba(245,158,11,0.4)] transition-transform active:scale-95"
-        >
-          {isPlaying ? (
-            <>
-              <Volume2 className="w-4 h-4 animate-pulse" />
-              <span>⏹️ बंद करें</span>
-            </>
+        <div className="flex flex-col items-center justify-center w-full">
+          {status === 'HOLIDAY' ? (
+             <div className="py-4">
+               <span className="text-red-500/80 font-black text-lg sm:text-xl tracking-widest uppercase">
+                 MARKET CLOSED
+               </span>
+             </div>
           ) : (
-            <>
-              <Volume2 className="w-4 h-4" />
-              <span>बोलकर सुनो</span>
-            </>
-          )}
-        </button>
-      </div>
-      
-      <div className="flex flex-col items-center justify-center w-full mt-4">
-        {status === 'HOLIDAY' ? (
-           <div className="py-6">
-             <span className="text-red-500/80 font-black text-2xl sm:text-3xl tracking-widest uppercase">
-               MARKET CLOSED
-             </span>
-           </div>
-        ) : (
-          <div className="flex flex-col items-center w-full max-w-lg">
-            
-            {/* Number Blocks */}
-            <div className="grid grid-cols-3 gap-2 px-2 w-full">
+            <div className="flex flex-col items-center w-full">
               
-              {/* OPEN BLOCK */}
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t.openLabel}</span>
-                <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-xl flex items-center justify-center h-16 sm:h-20">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.openPana === '***' ? 'text-slate-600' : isDeclared ? 'text-white text-xl sm:text-2xl tracking-[0.3em]' : 'text-slate-200'}`}>
-                    {market.openPana === '***' ? '---' : market.openPana.split('').join(' ')}
-                  </span>
+              {/* Number Blocks (Strict 3-Col Max-W) */}
+              <div className="grid grid-cols-3 gap-1.5 w-full max-w-[270px] mx-auto">
+                
+                {/* OPEN BLOCK */}
+                <div className="flex flex-col items-center overflow-hidden">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 truncate w-full text-center">{t.openLabel}</span>
+                  <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-lg flex items-center justify-center h-12 sm:h-14 overflow-hidden px-1">
+                    <span className={`whitespace-nowrap flex items-center justify-center text-sm sm:text-base font-black font-mono tracking-widest ${market.openPana === '***' ? 'text-slate-600' : isDeclared ? 'text-white' : 'text-slate-200'}`}>
+                      {market.openPana === '***' ? '---' : market.openPana}
+                    </span>
+                  </div>
+                </div>
+  
+                {/* JODI BLOCK (CENTER) */}
+                <div className="flex flex-col items-center overflow-hidden">
+                  <span className="text-[9px] sm:text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1 truncate w-full text-center">{t.jodiLabel}</span>
+                  <div className="w-full bg-slate-900 border border-amber-500/80 rounded-lg flex items-center justify-center h-12 sm:h-14 shadow-[0_0_10px_rgba(245,158,11,0.15)] overflow-hidden px-1">
+                    <span className={`whitespace-nowrap flex items-center justify-center text-xl sm:text-2xl font-black font-mono tracking-widest drop-shadow-md ${market.openSingle === '*' && market.closeSingle === '*' ? 'text-slate-600' : isDeclared ? 'text-amber-400 font-black' : 'text-white'}`}>
+                      {market.openSingle === '*' && market.closeSingle === '*' ? '--' : `${market.openSingle === '*' ? '-' : market.openSingle}${market.closeSingle === '*' ? '-' : market.closeSingle}`}
+                    </span>
+                  </div>
+                </div>
+  
+                {/* CLOSE BLOCK */}
+                <div className="flex flex-col items-center overflow-hidden">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 truncate w-full text-center">{t.closeLabel}</span>
+                  <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-lg flex items-center justify-center h-12 sm:h-14 overflow-hidden px-1">
+                    <span className={`whitespace-nowrap flex items-center justify-center text-sm sm:text-base font-black font-mono tracking-widest ${market.closePana === '***' ? 'text-slate-600' : isDeclared ? 'text-white' : 'text-emerald-400'}`}>
+                      {market.closePana === '***' ? '---' : market.closePana}
+                    </span>
+                  </div>
+                </div>
+  
+              </div>
+  
+              {/* Helper Pills */}
+              <div className="flex items-center justify-between gap-2 mt-2 w-full max-w-[270px] mx-auto">
+                <div className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-md px-2 py-1 flex items-center justify-between overflow-hidden">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase truncate pr-1">{t.singleOpenLabel}</span>
+                  <span className={`font-mono font-black text-sm whitespace-nowrap ${market.openSingle === '*' ? 'text-slate-600' : 'text-amber-400'}`}>{market.openSingle === '*' ? '-' : market.openSingle}</span>
+                </div>
+                <div className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-md px-2 py-1 flex items-center justify-between overflow-hidden">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase truncate pr-1">{t.singleCloseLabel}</span>
+                  <span className={`font-mono font-black text-sm whitespace-nowrap ${market.closeSingle === '*' ? 'text-slate-600' : 'text-emerald-400'}`}>{market.closeSingle === '*' ? '-' : market.closeSingle}</span>
                 </div>
               </div>
-
-              {/* JODI BLOCK (CENTER) */}
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-widest mb-1.5">{t.jodiLabel}</span>
-                <div className="w-full bg-slate-900 border-2 border-amber-500/80 rounded-xl flex items-center justify-center h-16 sm:h-20 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-2xl sm:text-4xl font-black font-mono tracking-[0.1em] sm:tracking-[0.2em] drop-shadow-md ${market.openSingle === '*' && market.closeSingle === '*' ? 'text-slate-600' : isDeclared ? 'text-amber-400 font-black text-3xl sm:text-5xl tracking-[0.15em]' : 'text-white'}`}>
-                    {market.openSingle === '*' && market.closeSingle === '*' ? '--' : `${market.openSingle === '*' ? '-' : market.openSingle}${market.closeSingle === '*' ? '-' : market.closeSingle}`}
-                  </span>
-                </div>
-              </div>
-
-              {/* CLOSE BLOCK */}
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t.closeLabel}</span>
-                <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-xl flex items-center justify-center h-16 sm:h-20">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.closePana === '***' ? 'text-slate-600' : isDeclared ? 'text-white text-xl sm:text-2xl tracking-[0.3em]' : 'text-emerald-400'}`}>
-                    {market.closePana === '***' ? '---' : market.closePana.split('').join(' ')}
-                  </span>
-                </div>
-              </div>
-
+  
             </div>
-
-            {/* Helper Pills */}
-            <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8 w-full">
-              <div className="bg-amber-500/20 border border-amber-500/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center gap-2 shadow-sm">
-                <span className="text-[10px] sm:text-xs font-bold text-amber-500/90 uppercase">{t.singleOpenLabel}:</span>
-                <span className={`font-mono font-black text-base sm:text-lg ${market.openSingle === '*' ? 'text-slate-500' : 'text-amber-400 drop-shadow-sm'}`}>{market.openSingle === '*' ? '-' : market.openSingle}</span>
-              </div>
-              <div className="bg-emerald-500/20 border border-emerald-500/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center gap-2 shadow-sm">
-                <span className="text-[10px] sm:text-xs font-bold text-emerald-500/90 uppercase">{t.singleCloseLabel}:</span>
-                <span className={`font-mono font-black text-base sm:text-lg ${market.closeSingle === '*' ? 'text-slate-500' : 'text-emerald-400 drop-shadow-sm'}`}>{market.closeSingle === '*' ? '-' : market.closeSingle}</span>
-              </div>
-            </div>
-
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
