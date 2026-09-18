@@ -83,7 +83,7 @@ interface AppState {
 
 const DICT = {
   en: {
-    subtitle: "OFFICIAL LIVE DRAW PORTAL • DHANVARSHA",
+    subtitle: "LIVE RESULTS PORTAL",
     tabLive: "🟢 Results",
     tabCalc: "🧮 Calculator",
     tabCharts: "📊 Charts",
@@ -129,7 +129,7 @@ const DICT = {
     }
   },
   hi: {
-    subtitle: "आधिकारिक लाइव परिणाम पोर्टल • धनवर्षा",
+    subtitle: "लाइव परिणाम पोर्टल",
     tabLive: "🟢 लाइव परिणाम",
     tabCalc: "🧮 कैलकुलेटर",
     tabCharts: "📊 इतिहास चार्ट",
@@ -524,46 +524,56 @@ const MarketCard = ({ market }: { market: Market }) => {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  const isDeclared = market.openPana !== '***' || market.closePana !== '***';
+  const isStrictlyClosed = (status === 'CLOSED' && !isDeclared) || status === 'HOLIDAY';
+
   return (
     <div className={`rounded-2xl overflow-hidden mb-6 flex flex-col items-center p-6 sm:p-8 relative transition-opacity duration-300 ${
-      isLiveSession 
+      isDeclared
+        ? 'bg-gradient-to-br from-[#0F1D38] to-[#0A1120] border-2 border-amber-500/50 shadow-xl shadow-amber-500/10 opacity-100'
+        : isLiveSession 
         ? 'bg-gradient-to-br from-[#0B132B] to-[#0A1120] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/10 opacity-100' 
-        : status === 'CLOSED' || status === 'HOLIDAY'
+        : isStrictlyClosed
         ? 'bg-slate-900 border border-slate-800 opacity-60'
         : 'bg-[#0B0F19] border border-slate-700/50 opacity-100'
     }`}>
-      {isLiveSession && (
-        <div className="absolute top-4 left-4 flex items-center bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-          <div className="relative flex h-2 w-2 mr-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </div>
-          <span className="text-emerald-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase">{t.liveDrawActive}</span>
+      {/* Header Row: Badges and Actions */}
+      <div className="w-full flex items-start justify-between mb-2">
+        <div className="flex-1">
+          {isLiveSession && (
+            <div className="inline-flex items-center bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+              <div className="relative flex h-2 w-2 mr-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </div>
+              <span className="text-emerald-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase">{t.liveDrawActive}</span>
+            </div>
+          )}
         </div>
-      )}
-      
-      {/* Share Button (Top Right) */}
-      {(status === 'LIVE' || status === 'CLOSED' || market.openPana !== '***') && (
-        <button 
-          onClick={handleShare}
-          className="absolute top-4 right-4 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] transition active:scale-95 border border-emerald-500"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          <span>{t.shareResult}</span>
-        </button>
-      )}
+        
+        {/* Share Button (Top Right) */}
+        {(status === 'LIVE' || status === 'CLOSED' || isDeclared) && (
+          <button 
+            onClick={handleShare}
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] transition active:scale-95 border border-emerald-500 shrink-0"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>{t.shareResult}</span>
+          </button>
+        )}
+      </div>
 
-      <div className="flex flex-col items-center justify-center w-full mb-6 mt-8 sm:mt-0">
+      <div className="flex flex-col items-center justify-center w-full mb-6 mt-2">
         <h2 className="text-xl sm:text-2xl font-bold text-slate-200 uppercase tracking-wider text-center mb-3">{(t.markets as any)[market.name.toUpperCase().trim()] || market.name}</h2>
         {renderBadge()}
         
         <button 
           onClick={handleSpeak}
-          className="mt-5 flex items-center justify-center gap-2 bg-slate-900 border border-amber-500/40 text-amber-400 font-bold text-xs sm:text-sm px-5 py-2 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.15)] transition-transform active:scale-95 hover:bg-slate-800"
+          className="mt-5 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-[0_4px_14px_rgba(245,158,11,0.4)] transition-transform active:scale-95"
         >
           {isPlaying ? (
             <>
-              <Volume2 className="w-4 h-4 text-amber-400 animate-pulse" />
+              <Volume2 className="w-4 h-4 animate-pulse" />
               <span>⏹️ बंद करें</span>
             </>
           ) : (
@@ -592,7 +602,7 @@ const MarketCard = ({ market }: { market: Market }) => {
               <div className="flex flex-col items-center">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t.openLabel}</span>
                 <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-xl flex items-center justify-center h-16 sm:h-20">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.openPana === '***' ? 'text-slate-600' : 'text-slate-200'}`}>
+                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.openPana === '***' ? 'text-slate-600' : isDeclared ? 'text-white text-xl sm:text-2xl tracking-[0.3em]' : 'text-slate-200'}`}>
                     {market.openPana === '***' ? '---' : market.openPana.split('').join(' ')}
                   </span>
                 </div>
@@ -602,7 +612,7 @@ const MarketCard = ({ market }: { market: Market }) => {
               <div className="flex flex-col items-center">
                 <span className="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-widest mb-1.5">{t.jodiLabel}</span>
                 <div className="w-full bg-slate-900 border-2 border-amber-500/80 rounded-xl flex items-center justify-center h-16 sm:h-20 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-2xl sm:text-4xl font-black font-mono tracking-[0.1em] sm:tracking-[0.2em] drop-shadow-md ${market.openSingle === '*' && market.closeSingle === '*' ? 'text-slate-600' : 'text-white'}`}>
+                  <span className={`whitespace-nowrap flex items-center justify-center text-2xl sm:text-4xl font-black font-mono tracking-[0.1em] sm:tracking-[0.2em] drop-shadow-md ${market.openSingle === '*' && market.closeSingle === '*' ? 'text-slate-600' : isDeclared ? 'text-amber-400 font-black text-3xl sm:text-5xl tracking-[0.15em]' : 'text-white'}`}>
                     {market.openSingle === '*' && market.closeSingle === '*' ? '--' : `${market.openSingle === '*' ? '-' : market.openSingle}${market.closeSingle === '*' ? '-' : market.closeSingle}`}
                   </span>
                 </div>
@@ -612,7 +622,7 @@ const MarketCard = ({ market }: { market: Market }) => {
               <div className="flex flex-col items-center">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t.closeLabel}</span>
                 <div className="w-full bg-slate-950/80 border border-slate-700/60 rounded-xl flex items-center justify-center h-16 sm:h-20">
-                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.closePana === '***' ? 'text-slate-600' : 'text-emerald-400'}`}>
+                  <span className={`whitespace-nowrap flex items-center justify-center text-lg sm:text-2xl font-black font-mono tracking-[0.2em] sm:tracking-[0.3em] ${market.closePana === '***' ? 'text-slate-600' : isDeclared ? 'text-white text-xl sm:text-2xl tracking-[0.3em]' : 'text-emerald-400'}`}>
                     {market.closePana === '***' ? '---' : market.closePana.split('').join(' ')}
                   </span>
                 </div>
@@ -621,14 +631,14 @@ const MarketCard = ({ market }: { market: Market }) => {
             </div>
 
             {/* Helper Pills */}
-            <div className="flex items-center gap-3 mt-8">
-              <div className="bg-slate-800/80 border border-slate-700 rounded-full px-4 py-1.5 flex items-center gap-2 shadow-sm">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">{t.singleOpenLabel}:</span>
-                <span className={`font-mono font-bold text-sm sm:text-base ${market.openSingle === '*' ? 'text-slate-500' : 'text-white'}`}>{market.openSingle === '*' ? '-' : market.openSingle}</span>
+            <div className="flex items-center justify-center gap-3 mt-6 sm:mt-8 w-full">
+              <div className="bg-amber-500/20 border border-amber-500/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center gap-2 shadow-sm">
+                <span className="text-[10px] sm:text-xs font-bold text-amber-500/90 uppercase">{t.singleOpenLabel}:</span>
+                <span className={`font-mono font-black text-base sm:text-lg ${market.openSingle === '*' ? 'text-slate-500' : 'text-amber-400 drop-shadow-sm'}`}>{market.openSingle === '*' ? '-' : market.openSingle}</span>
               </div>
-              <div className="bg-slate-800/80 border border-slate-700 rounded-full px-4 py-1.5 flex items-center gap-2 shadow-sm">
-                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">{t.singleCloseLabel}:</span>
-                <span className={`font-mono font-bold text-sm sm:text-base ${market.closeSingle === '*' ? 'text-slate-500' : 'text-emerald-400'}`}>{market.closeSingle === '*' ? '-' : market.closeSingle}</span>
+              <div className="bg-emerald-500/20 border border-emerald-500/50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2 flex items-center gap-2 shadow-sm">
+                <span className="text-[10px] sm:text-xs font-bold text-emerald-500/90 uppercase">{t.singleCloseLabel}:</span>
+                <span className={`font-mono font-black text-base sm:text-lg ${market.closeSingle === '*' ? 'text-slate-500' : 'text-emerald-400 drop-shadow-sm'}`}>{market.closeSingle === '*' ? '-' : market.closeSingle}</span>
               </div>
             </div>
 
@@ -651,20 +661,22 @@ const LiveView = () => {
     "DHANVARSHA NIGHT"
   ];
 
-  // Determine sorting based on priority: LIVE (0) > UPCOMING (1) > CLOSED/HOLIDAY (2)
+  // Determine sorting based on priority: DECLARED (0) > LIVE (1) > UPCOMING (2) > CLOSED/HOLIDAY (3)
   // Inside the group, preserve the original SEQUENCE order.
   const displayMarkets = [...markets].sort((a, b) => {
     const statusA = getStatus(a).status;
     const statusB = getStatus(b).status;
 
-    const getPriority = (status: MarketStatus | string) => {
-      if (status === 'LIVE') return 0;
-      if (status === 'UPCOMING') return 1;
-      return 2; // CLOSED or HOLIDAY
+    const getPriority = (status: MarketStatus | string, m: Market) => {
+      const isDeclared = m.openPana !== '***' || m.closePana !== '***';
+      if (isDeclared) return 0;
+      if (status === 'LIVE') return 1;
+      if (status === 'UPCOMING') return 2;
+      return 3; // CLOSED or HOLIDAY
     };
 
-    const prioA = getPriority(statusA);
-    const prioB = getPriority(statusB);
+    const prioA = getPriority(statusA, a);
+    const prioB = getPriority(statusB, b);
 
     if (prioA !== prioB) {
       return prioA - prioB;
@@ -1600,7 +1612,7 @@ export default function DhanvarshaDashboard() {
               <h1 className="text-xl sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 leading-none uppercase drop-shadow-sm">
                 DHANVARSHA
               </h1>
-              <span className="text-[10px] tracking-wide text-amber-300/70 font-medium truncate mt-1 uppercase drop-shadow-sm">
+              <span className="text-[10px] tracking-tight text-amber-300/70 font-bold mt-0.5 uppercase drop-shadow-sm whitespace-nowrap">
                 {t.subtitle}
               </span>
             </div>
